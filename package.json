@@ -1,0 +1,22 @@
+{
+  "name": "wordle",
+  "version": "1.0.0",
+  "description": "",
+  "main": "fetch-words.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chidiwilliams/wordle.git"
+  },
+  "author": "Chidi Williams",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/chidiwilliams/wordle/issues"
+  },
+  "homepage": "https://github.com/chidiwilliams/wordle#readme",
+  "dependencies": {
+    "axios": "^0.24.0"
+  }
+}
