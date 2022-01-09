@@ -10,7 +10,7 @@ for (let i = 2; i <= 15; i++) {
 // Fetch the responses from all 15 pages, merge, and write to output file
 Promise.all(urls.map((url) => getWordsFromURL(url))).then((responses) => {
   const words = new Set(responses.flat(1));
-  writeFileSync('words.json', JSON.stringify(Array.from(words)));
+  writeFileSync('./src/data/words.json', JSON.stringify(Array.from(words)));
 });
 
 // Matches all 5 letter words in the URL response body

@@ -1,6 +1,6 @@
 const fs = require('fs');
 const readline = require('readline');
-const { getBestGuess, updateGuessResult } = require('./wordle');
+const { getBestGuess, updateGuessResult } = require('./src/wordle');
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 

@@ -73,7 +73,7 @@ function getScore(word, letterScores) {
   // of words that use more different characters. The constant, 10,
   // serves as a way to weight the penalty vs the score of the letters
   // and can be adjusted as needed.
-  score -= new Set(word).size * 10;
+  score -= new Set(word).size * 5;
   return score;
 }
 
@@ -111,6 +111,8 @@ function updateGuessResult(words, guess, result) {
       case 2:
         rightGuessIndexToValue.set(i, letter);
         rightByLetter.set(letter, rightByLetter.has(letter) ? rightByLetter.get(letter) + 1 : 1);
+        break;
+      default:
         break;
     }
   }
