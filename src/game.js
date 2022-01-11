@@ -1,5 +1,5 @@
-const { getBestGuess, getSoundGuesses } = require('./wordle');
-const { compareWords } = require('./words');
+import { getBestGuess, getSoundGuesses } from './wordle';
+import { compareWords } from './words';
 
 const NUM_TRIES = 6;
 const WORD_LENGTH = 5;

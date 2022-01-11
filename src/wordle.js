@@ -184,4 +184,4 @@ function isSoundGuess(
   return true;
 }
 
-module.exports = { getBestGuess, getSoundGuesses };
+export { getBestGuess, getSoundGuesses };
