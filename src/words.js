@@ -34,4 +34,4 @@ function compareWords(chosen, target) {
   return result;
 }
 
-export { compareWords, getRandomWord };
+module.exports = { compareWords, getRandomWord };

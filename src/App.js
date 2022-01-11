@@ -2,141 +2,17 @@ import copy from 'copy-to-clipboard';
 import { useCallback, useEffect, useState } from 'react';
 import './App.scss';
 import words from './data/words.json';
-import { getBestGuess, updateGuessResult } from './wordle';
+import {
+  checkGameOver,
+  createBoard,
+  createKeyboard,
+  getShareText,
+  playAI,
+  states,
+  updateBoard,
+  updateKeyboard,
+} from './game';
 import { compareWords, getRandomWord } from './words';
-
-const STATES = {
-  EMPTY: 'empty',
-  ABSENT: 'absent',
-  PRESENT: 'present',
-  CORRECT: 'correct',
-};
-
-const numTries = 6;
-const wordLength = 5;
-function createBoard() {
-  return Array.from({ length: numTries }, () =>
-    Array.from({ length: wordLength }, () => ({ state: STATES.EMPTY, value: '' })),
-  );
-}
-
-function createKeyboard() {
-  const rows = ['q w e r t y u i o p', 'SPACE a s d f g h j k l SPACE', 'ENTER z x c v b n m BACK'];
-  return rows.map((row) => row.split(' ').map((key) => ({ value: key, state: STATES.EMPTY })));
-}
-
-function playAI(word, words) {
-  let board = createBoard();
-  let keyboard = createKeyboard();
-
-  let currentRow = 0;
-  let comparison;
-  while (
-    // can still play
-    currentRow < board.length &&
-    // and has not found the correct answer
-    (!comparison || !comparison.every((val) => val === 2))
-  ) {
-    const guess = getBestGuess(words);
-    comparison = compareWords(guess, word);
-
-    for (let i = 0; i < guess.length; i++) {
-      board[currentRow][i].value = guess[i];
-    }
-
-    const newBoard = updateBoard(board, currentRow, comparison);
-    board = newBoard;
-
-    const newKeyboard = updateKeyboard(keyboard, guess, comparison);
-    keyboard = newKeyboard;
-
-    words = updateGuessResult(words, guess, comparison);
-    currentRow++;
-  }
-
-  return { board, keyboard, lastComparison: comparison, lastRow: currentRow };
-}
-
-function updateBoard(board, rowIndex, rowValue) {
-  const statesByScore = [STATES.ABSENT, STATES.PRESENT, STATES.CORRECT];
-  const newBoard = [...board];
-  for (let i = 0; i < rowValue.length; i++) {
-    newBoard[rowIndex][i].state = statesByScore[rowValue[i]];
-  }
-  return newBoard;
-}
-
-function updateKeyboard(keyboard, guess, result) {
-  const newKeyboard = [...keyboard];
-  for (let i = 0; i < result.length; i++) {
-    newKeyboard.forEach((row) => {
-      row.forEach((key) => {
-        if (key.value === guess.charAt(i)) {
-          switch (result[i]) {
-            case 2:
-              key.state = STATES.CORRECT;
-              break;
-
-            case 1:
-              if (key.state !== STATES.CORRECT) {
-                key.state = STATES.PRESENT;
-              }
-              break;
-
-            case 0:
-              if (key.state !== STATES.CORRECT && key.state !== STATES.PRESENT) {
-                key.state = STATES.ABSENT;
-              }
-              break;
-
-            default:
-              break;
-          }
-        }
-      });
-    });
-  }
-
-  return newKeyboard;
-}
-
-function checkGameOver(board, currentRow) {
-  return isGameWon(board, currentRow) || currentRow === board.length - 1;
-}
-
-function isGameWon(board, currentRow) {
-  return board[currentRow].every((cell) => cell.state === STATES.CORRECT);
-}
-
-const stateIcons = { [STATES.ABSENT]: '⬛', [STATES.PRESENT]: '🟨', [STATES.CORRECT]: '🟩' };
-function getShareText(board, aiBoard, wordIndex, lastRow, lastAiRow) {
-  const score = lastRow === board.length && !isGameWon(board, lastRow - 1) ? 'X' : lastRow;
-  const aiScore =
-    lastAiRow === aiBoard.length && !isGameWon(aiBoard, lastAiRow - 1) ? 'X' : lastAiRow;
-
-  let text = `Wordle vs AI ${wordIndex} ${score}/${board.length} - ${aiScore}/${aiBoard.length}\n`;
-
-  for (let i = 0; i < Math.max(lastRow, lastAiRow); i++) {
-    for (const cell of board[i]) {
-      if (cell.state === STATES.EMPTY) {
-        break;
-      }
-      text += stateIcons[cell.state];
-    }
-
-    text += '  ';
-
-    for (const cell of aiBoard[i]) {
-      if (cell.state === STATES.EMPTY) {
-        break;
-      }
-      text += stateIcons[cell.state];
-    }
-    text += '\n';
-  }
-
-  return text;
-}
 
 const emptyBoard = createBoard();
 const emptyKeyboard = createKeyboard();
@@ -148,54 +24,58 @@ function App() {
   const [wordIndex, setWordIndex] = useState(randomWordIndex);
   const [currentRow, setCurrentRow] = useState(0);
   const [currentColumn, setCurrentColumn] = useState(0);
-  const [board, setBoard] = useState([...emptyBoard]);
-  const [keyboard, setKeyboard] = useState([...emptyKeyboard]);
+  const [board, setBoard] = useState(emptyBoard);
+  const [keyboard, setKeyboard] = useState(emptyKeyboard);
   const [isGameOver, setIsGameOver] = useState(false);
   const [aiGame, setAiGame] = useState(firstAiGame);
   const [showAiGame, setShowAiGame] = useState(false);
 
   const enterKey = useCallback(
     (key) => {
-      if (
-        key.length === 1 &&
-        key.charCodeAt(0) >= 'a'.charCodeAt(0) &&
-        key.charCodeAt(0) <= 'z'.charCodeAt(0) &&
-        currentColumn < board[0].length
-      ) {
-        const newBoard = [...board];
-        newBoard[currentRow][currentColumn].value = key;
-        setBoard(newBoard);
-        setCurrentColumn(currentColumn + 1);
-      } else if (key === 'backspace' && currentColumn > 0) {
-        const newBoard = [...board];
-        newBoard[currentRow][currentColumn - 1].value = '';
-        setBoard(newBoard);
-        setCurrentColumn(currentColumn - 1);
-      } else if (key === 'enter' && !isGameOver) {
-        for (const cell of board[currentRow]) {
-          if (!cell.value) {
+      if (!isGameOver) {
+        if (
+          key.length === 1 &&
+          key.charCodeAt(0) >= 'a'.charCodeAt(0) &&
+          key.charCodeAt(0) <= 'z'.charCodeAt(0) &&
+          currentColumn < board[0].length
+        ) {
+          const newBoard = [...board];
+          newBoard[currentRow][currentColumn].value = key;
+          newBoard[currentRow][currentColumn].state = states.TBD;
+          setBoard(newBoard);
+          setCurrentColumn(currentColumn + 1);
+        } else if (key === 'backspace' && currentColumn > 0) {
+          const newBoard = [...board];
+          newBoard[currentRow][currentColumn - 1].value = '';
+          newBoard[currentRow][currentColumn - 1].state = states.EMPTY;
+          setBoard(newBoard);
+          setCurrentColumn(currentColumn - 1);
+        } else if (key === 'enter') {
+          for (const cell of board[currentRow]) {
+            if (!cell.value) {
+              return;
+            }
+          }
+
+          const chosenWord = board[currentRow].map((cell) => cell.value).join('');
+          if (!words.includes(chosenWord)) {
+            alert('Not in word list');
             return;
           }
-        }
 
-        const chosenWord = board[currentRow].map((cell) => cell.value).join('');
-        if (!words.includes(chosenWord)) {
-          alert('Not in word list');
-          return;
-        }
+          const comparison = compareWords(chosenWord, word);
+          const newBoard = updateBoard(board, currentRow, comparison);
+          setBoard(newBoard);
 
-        const comparison = compareWords(chosenWord, word);
-        const newBoard = updateBoard(board, currentRow, comparison);
-        setBoard(newBoard);
+          setCurrentRow(currentRow + 1);
+          setCurrentColumn(0);
 
-        setCurrentRow(currentRow + 1);
-        setCurrentColumn(0);
+          const newKeyboard = updateKeyboard(keyboard, chosenWord, comparison);
+          setKeyboard(newKeyboard);
 
-        const newKeyboard = updateKeyboard(keyboard, chosenWord, comparison);
-        setKeyboard(newKeyboard);
-
-        if (checkGameOver(board, currentRow)) {
-          setIsGameOver(true);
+          if (checkGameOver(board, currentRow)) {
+            setIsGameOver(true);
+          }
         }
       }
     },
@@ -245,13 +125,18 @@ function App() {
   };
 
   const onClickShare = () => {
-    const text = getShareText(board, aiGame.board, 2, currentRow, aiGame.lastRow);
-    copy(text);
+    const shareText = getShareText(board, aiGame.board, wordIndex, currentRow, aiGame.lastRow);
+    copy(shareText);
     alert('Copied results to clipboard');
   };
 
   return (
     <div id="game">
+      <header>
+        <div className="title">
+          WORDLE <span>vs AI</span>
+        </div>
+      </header>
       <div id="board-container">
         <div id="board" style={{ width: 350, height: 350 }}>
           {(showAiGame ? aiGame.board : board).map((row, rowId) => (
@@ -276,7 +161,8 @@ function App() {
         {isGameOver && (
           <>
             <label>
-              <input type="checkbox" onClick={onClickShowAiBoard} /> Show AI board
+              <input type="checkbox" onClick={onClickShowAiBoard} checked={showAiGame} /> Show AI
+              board
             </label>
             <button onClick={onClickReset}>RESET</button>
             <button onClick={onClickShare} id="force-share-button">

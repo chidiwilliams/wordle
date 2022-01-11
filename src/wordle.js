@@ -7,17 +7,20 @@ function getBestGuess(words) {
   let letterScores = getLetterScores(words);
 
   let bestWord;
-  let bestWordScore = Number.POSITIVE_INFINITY;
-  words.forEach((word) => {
+  let bestWordScore = Number.NEGATIVE_INFINITY;
+  for (const word of words) {
     let score = getScore(word, letterScores);
-    if (score < bestWordScore) {
+    if (score > bestWordScore) {
       bestWord = word;
       bestWordScore = score;
     }
-  });
+  }
 
   return bestWord;
 }
+
+// prettier-ignore
+const alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
 
 /**
  * Returns a map of each letter in the words to its score.
@@ -30,19 +33,17 @@ function getBestGuess(words) {
  */
 function getLetterScores(words) {
   // Get the frequencies of the letters in the list of words
-  const freqs = new Map();
-  words.forEach((word) => {
-    word.split('').forEach((letter) => {
-      freqs.set(letter, freqs.has(letter) ? freqs.get(letter) + 1 : 1);
-    });
-  });
+  const frequencies = new Map();
+  for (const word of words) {
+    for (const letter of word) {
+      frequencies.set(letter, frequencies.has(letter) ? frequencies.get(letter) + 1 : 1);
+    }
+  }
 
   let letterScores = new Map();
-
-  // Generate a list of the letters from "a" to "z"
-  Array.from({ length: 26 }, (_, j) => String.fromCharCode(j + 'a'.charCodeAt(0)))
-    // Sort the letters by their frequencies (descending)
-    .sort((a, b) => (freqs.get(a) < freqs.get(b) ? 1 : -1))
+  alphabet
+    // Sort the letters by their frequencies (ascending)
+    .sort((a, b) => ((frequencies.get(a) || 0) < (frequencies.get(b) || 0) ? -1 : 1))
     .forEach((letter, i) => {
       // Map each letter to its score
       letterScores.set(letter, i);
@@ -50,6 +51,8 @@ function getLetterScores(words) {
 
   return letterScores;
 }
+
+const UNIQUENESS_SCORE_WEIGHT = 5;
 
 /**
  * Returns a word's score. The score is calculated by summing the
@@ -68,12 +71,13 @@ function getScore(word, letterScores) {
     score += letterScores.get(word[i]);
   }
 
-  // Subtract five times the number of unique letters in the word.
   // This penalizes words that repeat the same characters in favour,
   // of words that use more different characters. The constant, 10,
   // serves as a way to weight the penalty vs the score of the letters
   // and can be adjusted as needed.
-  score -= new Set(word).size * 5;
+  const numUniqueLetters = new Set(word).size;
+  score += numUniqueLetters * UNIQUENESS_SCORE_WEIGHT;
+
   return score;
 }
 
@@ -83,34 +87,31 @@ function getScore(word, letterScores) {
  * @param {string} guess
  * @param {number[]} result
  */
-function updateGuessResult(words, guess, result) {
-  // Indexes where the guess was the correct letter, but not in the correct position
-  const misplacedGuessesIds = new Set();
+function getSoundGuesses(words, guess, result) {
+  // Map of index to correct value
+  const correctLetters = new Map();
+  // Map of index to misplaced value
+  const misplacedLetters = new Map();
+  // Wrongly guessed letters
+  const wrongLetters = new Set();
 
-  // Indexes where the guess was correct mapped to the correct value
-  const rightGuessIndexToValue = new Map();
-
-  // Counts of each letter in the guess being misplaced, correct, or wrong
-  const misplacedByLetter = new Map();
-  const wrongByLetter = new Map();
-  const rightByLetter = new Map();
+  // Counts of each letter in the guess being correct (placed correctly/not)
+  const numCorrect = new Map();
+  const numMisplaced = new Map();
 
   for (let i = 0; i < result.length; i++) {
     const letter = guess[i];
     switch (result[i]) {
       case 0:
-        wrongByLetter.set(letter, wrongByLetter.has(letter) ? wrongByLetter.get(letter) + 1 : 1);
+        wrongLetters.add(letter);
         break;
       case 1:
-        misplacedGuessesIds.add(i);
-        misplacedByLetter.set(
-          letter,
-          misplacedByLetter.has(letter) ? misplacedByLetter.get(letter) + 1 : 1,
-        );
+        misplacedLetters.set(i, letter);
+        numMisplaced.set(letter, numMisplaced.has(letter) ? numMisplaced.get(letter) + 1 : 1);
         break;
       case 2:
-        rightGuessIndexToValue.set(i, letter);
-        rightByLetter.set(letter, rightByLetter.has(letter) ? rightByLetter.get(letter) + 1 : 1);
+        correctLetters.set(i, letter);
+        numCorrect.set(letter, numCorrect.has(letter) ? numCorrect.get(letter) + 1 : 1);
         break;
       default:
         break;
@@ -118,69 +119,69 @@ function updateGuessResult(words, guess, result) {
   }
 
   // Filter out the words that pass the requirements of the last guess's results
-  return words.filter((word) => {
-    const letterCounts = new Map();
-
-    // For each index in the word...
-    for (let i = 0; i < word.length; i++) {
-      const letter = word[i];
-
-      letterCounts.set(letter, letterCounts.has(letter) ? letterCounts.get(letter) + 1 : 1);
-
-      // If we've already correctly guessed the value of this index, and
-      // this word does not have that correct value, we can discard the word
-      if (rightGuessIndexToValue.has(i) && rightGuessIndexToValue.get(i) !== letter) {
-        return false;
-      }
-    }
-
-    // For each letter in the word...
-    for (const letter of word) {
-      const numLetterOccurs = letterCounts.get(letter);
-
-      // If the letter was guessed wrongly, it should occur exactly the sum of the number of
-      // times we guessed it right and the number of times we guessed it in the wrong position
-      if (
-        wrongByLetter.has(letter) &&
-        numLetterOccurs !== (rightByLetter.get(letter) || 0) + (misplacedByLetter.get(letter) || 0)
-      ) {
-        return false;
-      }
-
-      // If the letter was *not* guessed wrongly, it should occur at least the sum of the number of
-      // times we guessed it right and the number of times we guessed it in the wrong position
-      if (
-        !wrongByLetter.has(letter) &&
-        numLetterOccurs < (rightByLetter.get(letter) || 0) + (misplacedByLetter.get(letter) || 0)
-      ) {
-        return false;
-      }
-    }
-
-    for (const misplacedGuessId of misplacedGuessesIds) {
-      let hasMisplaced = false;
-
-      for (let j = 0; j < word.length; j++) {
-        if (word[j] === guess[misplacedGuessId]) {
-          // ...or if it has a misplaced letter in the same position
-          if (misplacedGuessId === j) {
-            return false;
-          }
-          hasMisplaced = true;
-        }
-      }
-
-      // ...or if it does not have a misplaced letter anywhere
-      if (!hasMisplaced) {
-        return false;
-      }
-    }
-
-    // Return true if all the checks pass (i.e. the word has no wrong letters, has
-    // all the right letters in their correct positions, has no misplaced letter
-    // in the same position, and has all the misplaced letters in new positions)
-    return true;
-  });
+  return words.filter((word) =>
+    isSoundGuess(word, correctLetters, wrongLetters, misplacedLetters, numCorrect, numMisplaced),
+  );
 }
 
-module.exports = { getBestGuess, updateGuessResult };
+function isSoundGuess(
+  word,
+  correctLetters,
+  wrongLetters,
+  misplacedLetters,
+  numCorrect,
+  numMisplaced,
+) {
+  // For each index in the word...
+  for (let i = 0; i < word.length; i++) {
+    // If we've already correctly guessed the value of this index, and
+    // this word does not have that correct value, we can discard the word
+    if (correctLetters.has(i) && correctLetters.get(i) !== word[i]) {
+      return false;
+    }
+  }
+
+  // For each index with a misplaced value
+  for (const [index, value] of misplacedLetters) {
+    let hasMisplaced = false;
+
+    for (let i = 0; i < word.length; i++) {
+      if (word[i] === value) {
+        // If the word has the misplaced value in the same index, we can discard it
+        if (index === i) {
+          return false;
+        }
+        hasMisplaced = true;
+      }
+    }
+
+    // And if the word does not have the misplaced value *at all*, we can also discard it
+    if (!hasMisplaced) {
+      return false;
+    }
+  }
+
+  // Map of each letter in the word to the number of times it occurs
+  const letterCounts = new Map();
+  for (const letter of word) {
+    letterCounts.set(letter, letterCounts.has(letter) ? letterCounts.get(letter) + 1 : 1);
+  }
+
+  // For each wrongly guessed letter...
+  for (const letter of wrongLetters) {
+    // If the word includes this letter...
+    if (word.includes(letter)) {
+      const numLetterOccurs = letterCounts.get(letter);
+
+      // It should only occur exactly the sum of the number of times it was guessed right (wrong/right position)
+      if (numLetterOccurs !== (numCorrect.get(letter) || 0) + (numMisplaced.get(letter) || 0)) {
+        return false;
+      }
+    }
+  }
+
+  // Return true if all the checks pass
+  return true;
+}
+
+module.exports = { getBestGuess, getSoundGuesses };

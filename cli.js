@@ -1,10 +1,10 @@
 const fs = require('fs');
 const readline = require('readline');
-const { getBestGuess, updateGuessResult } = require('./src/wordle');
+const { getBestGuess, getSoundGuesses } = require('./src/wordle');
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
-const input = fs.readFileSync('./words.json').toString();
+const input = fs.readFileSync('./src/data/words.json').toString();
 let words = JSON.parse(input);
 
 function main() {
@@ -15,7 +15,7 @@ function main() {
     const guess = answer.slice(0, 6);
     const result = JSON.parse(answer.slice(6));
 
-    words = updateGuessResult(words, guess, result);
+    words = getSoundGuesses(words, guess, result);
     main();
   });
 }

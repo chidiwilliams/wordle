@@ -1,29 +1,36 @@
 const assert = require('assert');
 const fs = require('fs');
-const { getBestGuess, updateGuessResult } = require('./wordle');
+const { getBestGuess, getSoundGuesses } = require('./wordle');
+const { compareWords } = require('./words');
 
-const input = fs.readFileSync('./words.json').toString();
+const input = fs.readFileSync(__dirname + '/data/words.json').toString();
 let allWords = JSON.parse(input);
 
 // 09/01, gorge
 {
   let words = allWords;
-  assert.equal(getBestGuess(words), 'aeros');
+  let target = 'gorge';
 
-  console.log(`guessing 'aeros' from ${words.length} words`);
-  words = updateGuessResult(words, 'aeros', [0, 1, 2, 1, 0]);
+  // assert.equal(getBestGuess(words), 'aeros');
+
+  let guess = 'aeros';
+  console.log(`guessing ${guess} from ${words.length} words`);
+  words = getSoundGuesses(words, guess, compareWords(guess, target));
   assert.equal(getBestGuess(words), 'borde');
 
-  console.log(`guessing 'borde' from ${words.length} words`);
-  words = updateGuessResult(words, 'borde', [0, 2, 2, 0, 2]);
+  guess = 'borde';
+  console.log(`guessing ${guess} from ${words.length} words`);
+  words = getSoundGuesses(words, guess, compareWords(guess, target));
   assert.equal(getBestGuess(words), 'forge');
 
-  console.log(`guessing 'forge' from ${words.length} words`);
-  words = updateGuessResult(words, 'forge', [0, 2, 2, 2, 2]);
+  guess = 'forge';
+  console.log(`guessing ${guess} from ${words.length} words`);
+  words = getSoundGuesses(words, guess, compareWords(guess, target));
   assert.equal(getBestGuess(words), 'porge');
 
-  console.log(`guessing 'porge' from ${words.length} words`);
-  words = updateGuessResult(words, 'porge', [0, 2, 2, 2, 2]);
+  guess = 'porge';
+  console.log(`guessing ${guess} from ${words.length} words`);
+  words = getSoundGuesses(words, guess, compareWords(guess, target));
   assert.equal(getBestGuess(words), 'gorge');
 }
 
@@ -32,30 +39,31 @@ console.log('\n');
 // 09/01, gorge
 {
   let words = allWords;
+  let target = 'gorge';
   assert.equal(getBestGuess(words), 'aeros');
 
-  // choose word with one letter occuring twice
-  console.log(`guessing 'freed' from ${words.length} words`);
-  words = updateGuessResult(words, 'freed', [0, 1, 1, 0, 0]);
-  assert.equal(getBestGuess(words), 'osier');
+  let guess = 'freed';
+  console.log(`guessing ${guess} from ${words.length} words`);
+  words = getSoundGuesses(words, guess, compareWords(guess, target));
+  assert.equal(getBestGuess(words), 'aeros');
 
-  console.log(`guessing 'osier' from ${words.length} words`);
-  words = updateGuessResult(words, 'osier', [1, 0, 0, 1, 1]);
-  assert.equal(getBestGuess(words), 'ronte');
+  guess = 'aeros';
+  console.log(`guessing ${guess} from ${words.length} words`);
+  words = getSoundGuesses(words, guess, compareWords(guess, target));
+  assert.equal(getBestGuess(words), 'rorie');
 
-  console.log(`guessing 'ronte' from ${words.length} words`);
-  words = updateGuessResult(words, 'ronte', [1, 2, 0, 0, 2]);
-  assert.equal(getBestGuess(words), 'powre');
+  guess = 'rorie';
+  console.log(`guessing ${guess} from ${words.length} words`);
+  words = getSoundGuesses(words, guess, compareWords(guess, target));
+  assert.equal(getBestGuess(words), 'borne');
 
-  console.log(`guessing 'powre' from ${words.length} words`);
-  words = updateGuessResult(words, 'powre', [0, 2, 0, 1, 2]);
-  assert.equal(getBestGuess(words), 'horme');
+  guess = 'borne';
+  console.log(`guessing ${guess} from ${words.length} words`);
+  words = getSoundGuesses(words, guess, compareWords(guess, target));
+  assert.equal(getBestGuess(words), 'porge');
 
-  console.log(`guessing 'horme' from ${words.length} words`);
-  words = updateGuessResult(words, 'horme', [0, 2, 2, 0, 2]);
-  assert.equal(getBestGuess(words), 'corbe');
-
-  console.log(`guessing 'corbe' from ${words.length} words`);
-  words = updateGuessResult(words, 'corbe', [0, 2, 2, 0, 2]);
+  guess = 'porge';
+  console.log(`guessing ${guess} from ${words.length} words`);
+  words = getSoundGuesses(words, guess, compareWords(guess, target));
   assert.equal(getBestGuess(words), 'gorge');
 }
