@@ -136,7 +136,7 @@ function getShareText(board, aiBoard, wordIndex, lastRow, lastAiRow) {
   return text;
 }
 
-module.exports = {
+export {
   createBoard,
   createKeyboard,
   playAI,
