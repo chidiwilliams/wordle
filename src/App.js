@@ -138,7 +138,7 @@ function App() {
         </div>
       </header>
       <div id="board-container">
-        <div id="board" style={{ width: 350, height: 350 }}>
+        <div id="board" style={{ width: 350, height: 420 }}>
           {(showAiGame ? aiGame.board : board).map((row, rowId) => (
             <div className="row" key={rowId}>
               {row.map((tile, tileId) => (
